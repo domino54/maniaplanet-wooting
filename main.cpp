@@ -59,16 +59,6 @@ bool applicationRunning = true;
 WootingRGB wootingRGB("wooting-rgb-control.dll"); // Wooting DLL
 
 /**
- * Convert ManiaPlanet Bool to bool.
- *
- *	@param prop The Bool to convert.
- *	@return Converted bool value.
- */
-bool B(NManiaPlanet::Bool prop) {
-	return (bool*)&prop;
-}
-
-/**
  * Render the RGB effects on the keyboard.
  *
  *	@param telemetry The game's shared data.
@@ -79,6 +69,7 @@ void renderEffects(NManiaPlanet::STelemetry telemetry) {
 	Color vehicleColor = COLOR_DEFAULT;
 	
 	// Keyboard color depends on the currently driven vehicle
+	// YES, strstr, because PlayerModel can be eg. "Vehicles/CanyonCar.Item.Gbx"
 	if (strstr(telemetry.Game.PlayerModel, "CanyonCar"))	vehicleColor = COLOR_CANYONCAR;
 	if (strstr(telemetry.Game.PlayerModel, "StadiumCar"))	vehicleColor = COLOR_STADIUMCAR;
 	if (strstr(telemetry.Game.PlayerModel, "ValleyCar"))	vehicleColor = COLOR_VALLEYCAR;
@@ -170,16 +161,17 @@ void renderEffects(NManiaPlanet::STelemetry telemetry) {
 	// In water
 	if (telemetry.Vehicle.IsInWater) matrixColor = COLOR_INWATER;
 	
-	for (int x = 0; x < 14; x++)
-	for (int y = 2; y < 6; y++) {
-		wootingRGB.wooting_rgb_array_set_single(y, x, matrixColor.R, matrixColor.G, matrixColor.B);
+	for (int x = 0; x < 14; x++) {
+		for (int y = 2; y < 6; y++) {
+			wootingRGB.wooting_rgb_array_set_single(y, x, matrixColor.R, matrixColor.G, matrixColor.B);
+		}
 	}
 	
 	// Turbo boost
 	if (telemetry.Vehicle.EngineTurboRatio > 0) {
 		for (int y = 5; y >= 2; y--) {
 			float turboRatio = telemetry.Vehicle.EngineTurboRatio * 8;
-			float keyRatio = (5 - y) * 1.;
+			float keyRatio = 5 - y;
 			float diff = turboRatio - keyRatio;
 	
 			Color turboColor(0, 0, 0);
@@ -193,7 +185,7 @@ void renderEffects(NManiaPlanet::STelemetry telemetry) {
 				wootingRGB.wooting_rgb_array_set_single(y, x, turboColor.R, turboColor.G, turboColor.B);
 			}
 		}
-}
+	}
 	
 	// Print on keyboard
 	wootingRGB.wooting_rgb_array_update_keyboard();
@@ -221,7 +213,7 @@ bool resetWooting() {
 }
 
 /**
- * Cleanup before closing the app
+ * Cleanup before closing the app.
  */
 void shutdown() {
 	applicationRunning = false;
@@ -269,7 +261,7 @@ int main(int argc, char *argv[]) {
 		// Immediately stop if keyboard got disconnected
 		if (!wootingRGB.wooting_rgb_kbd_connected()) {
 			printf("Keyboard disconnected! Stopping the app...\n");
-			shutdown();
+			applicationRunning = false;
 			break;
 		}
 		
